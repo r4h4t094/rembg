@@ -1,0 +1,75 @@
+# kivy_design/main.kv
+<MainScreen>:
+    orientation: 'vertical'
+    padding: 20
+    spacing: 20
+    
+    BoxLayout:
+        size_hint_y: None
+        height: 60
+        spacing: 20
+        
+        Button:
+            text: 'Select Image'
+            background_normal: ''
+            background_color: (0.2, 0.6, 0.8, 1)
+            on_press: root.select_image()
+        
+        Button:
+            id: process_button
+            text: 'Remove Background'
+            background_normal: ''
+            background_color: (0.8, 0.4, 0.2, 1)
+            disabled: True
+            on_press: root.process_image()
+        
+        Button:
+            id: save_button
+            text: 'Save'
+            background_normal: ''
+            background_color: (0.2, 0.8, 0.4, 1)
+            disabled: True
+            on_press: root.save_image()
+    
+    Label:
+        id: status_label
+        size_hint_y: None
+        height: 30
+        text: ''
+        color: (1, 1, 1, 1)
+        font_size: 16
+    
+    BoxLayout:
+        spacing: 20
+        
+        BoxLayout:
+            orientation: 'vertical'
+            spacing: 10
+            
+            Label:
+                text: 'Original Image'
+                color: (1, 1, 1, 1)
+                font_size: 18
+                size_hint_y: None
+                height: 30
+            
+            Image:
+                id: original_image
+                allow_stretch: True
+                keep_ratio: True
+        
+        BoxLayout:
+            orientation: 'vertical'
+            spacing: 10
+            
+            Label:
+                text: 'Processed Image'
+                color: (1, 1, 1, 1)
+                font_size: 18
+                size_hint_y: None
+                height: 30
+            
+            Image:
+                id: processed_image
+                allow_stretch: True
+                keep_ratio: True
