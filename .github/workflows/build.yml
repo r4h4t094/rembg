@@ -11,32 +11,101 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4  # Updated from v2 to v4
+    - uses: actions/checkout@v4
     
     - name: Set up Python
-      uses: actions/setup-python@v5  # Updated from v2 to v5
+      uses: actions/setup-python@v4
       with:
         python-version: '3.8'
     
-    - name: Install dependencies
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+            python3-pip \
+            autoconf \
+            automake \
+            cmake \
+            libffi-dev \
+            libtool \
+            pkg-config \
+            zlib1g-dev \
+            libncurses5-dev \
+            libncursesw5-dev \
+            libtinfo5 \
+            build-essential \
+            openjdk-11-jdk \
+            unzip \
+            zip \
+            wget
+    
+    - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
         pip install buildozer cython==0.29.19
         
+    - name: Cache pip
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Set up JDK
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'zulu'
+        java-version: '11'
+        
+    - name: Cache Android SDK
+      uses: actions/cache@v3
+      id: android-cache
+      with:
+        path: |
+          android-sdk
+          ~/.android
+        key: ${{ runner.os }}-android-sdk-${{ hashFiles('buildozer.spec') }}
+        restore-keys: |
+          ${{ runner.os }}-android-sdk-
+    
     - name: Install Android SDK
+      if: steps.android-cache.outputs.cache-hit != 'true'
       run: |
-        mkdir -p ~/.android
-        touch ~/.android/repositories.cfg
+        # Download Android Command Line Tools
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+        unzip -q cmdline-tools.zip -d cmdline-tools
+        mkdir -p android-sdk/cmdline-tools/latest
+        mv cmdline-tools/cmdline-tools/* android-sdk/cmdline-tools/latest/
+        rm -rf cmdline-tools cmdline-tools.zip
+        
+        # Add Android SDK to PATH
+        echo "$GITHUB_WORKSPACE/android-sdk" >> $GITHUB_PATH
+        echo "$GITHUB_WORKSPACE/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+        echo "$GITHUB_WORKSPACE/android-sdk/platform-tools" >> $GITHUB_PATH
+        
+        # Accept licenses and install components
         yes | sdkmanager --licenses
         sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3"
         
+        # Set environment variables
+        echo "ANDROID_SDK_ROOT=$GITHUB_WORKSPACE/android-sdk" >> $GITHUB_ENV
+        echo "ANDROID_HOME=$GITHUB_WORKSPACE/android-sdk" >> $GITHUB_ENV
+        
+    - name: Debug environment
+      run: |
+        echo "PATH: $PATH"
+        echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+        sdkmanager --list
+        
     - name: Build APK
       run: |
+        buildozer init
         buildozer -v android debug
         ls -la bin/
         
     - name: Upload APK
-      uses: actions/upload-artifact@v4  # Updated from v2 to v4
+      uses: actions/upload-artifact@v3
       with:
         name: background-remover-apk
         path: bin/*.apk
